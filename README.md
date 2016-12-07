@@ -19,7 +19,7 @@ Install using the plugin manager you like.
 
 For example [vim-plug](https://github.com/junegunn/vim-plug):
 ```vim
-Plug 'donRaphaco/NeoTex', { 'for': 'tex' }
+Plug 'donRaphaco/neotex', { 'for': 'tex' }
 ```
 Do `:UpdateRemotePlugins` after installing or updating!
 
