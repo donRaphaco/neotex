@@ -33,7 +33,7 @@ The PDF is created in the same folder where your latex file is stored.
 | Option                            | Default   | Description                               |
 | --------------------------------- | --------- | ----------------------------------------- |
 | `g:neotex_enabled`                | 1         | 0 = always disabled, 1 = default off, 2 = default on |
-| `g:neotex_delay`                  | 1000      | Update intervall                          |
+| `g:neotex_delay`                  | 1000      | Update intervall in milliseconds          |
 | `g:neotex_latexdiff`              | 0         | enable latexdiff                          |
 | `g:neotex_latexdiff_options`      | -         | additional options for latexdiff          |
 | `g:neotex_pdflatex_add_options`   | -         | additional options for pdflatex (`-jobname=<filname>` and `-interaction=nonstopmode` is always set) |
