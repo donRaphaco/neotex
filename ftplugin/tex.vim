@@ -21,17 +21,17 @@ if !exists('s:neotex_loaded')
 	let s:neotex_loaded = 1
 endif
 
-let b:neotex_jobexe='cd ' . expand('%:p:h') . ' && '
+let b:neotex_jobexe=''
 
 if get(g:, 'neotex_latexdiff', 0)
 	let b:neotex_jobexe .= 'latexdiff '
 	if exists('neotex_latexdiff_options')
 		let b:neotex_jobexe .= g:neotex_latexdiff_options . ' '
 	endif
-	let b:neotex_jobexe .= expand('%:p') . ' ' . s:neotex_buffer_tempname . ' > ' . s:neotex_preview_tempname . ' && '
+	let b:neotex_jobexe .= fnameescape(expand('%:t')) . ' ' . s:neotex_buffer_tempname . ' > ' . s:neotex_preview_tempname . ' && '
 endif
 
-let b:neotex_jobexe .= 'pdflatex -jobname=' . expand('%:t:r') . ' -interaction=nonstopmode '
+let b:neotex_jobexe .= 'pdflatex -jobname=' . fnameescape(expand('%:t:r')) . ' -interaction=nonstopmode '
 if exists('neotex_pdflatex_add_options')
 	let b:neotex_jobexe .= g:neotex_pdflatex_add_options . ' '
 endif

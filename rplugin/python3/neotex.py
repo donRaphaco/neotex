@@ -11,7 +11,7 @@ class NeoTex(object):
     def init(self, args):
         self.wait = False
         self.delay = self.vim.vars.get('neotex_delay', 1.0)/1000.0
-        self.latexdiff = bool(self.vim.vars.get('neotex_latexdiff',0))
+        self.latexdiff = bool(self.vim.vars.get('neotex_latexdiff', 0))
         self.tempname = args[0]
         self.vim
 
@@ -36,4 +36,5 @@ class NeoTex(object):
         exe = self.vim.eval('b:neotex_jobexe')
         with open(self.tempname, 'w') as f:
             f.write('\n'.join(buff))
-        self.vim.funcs.jobstart(exe)
+        self.vim.funcs.jobstart(['bash', '-c', exe],
+                                {'cwd': self.vim.funcs.expand('%:p:h')})
