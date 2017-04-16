@@ -31,7 +31,7 @@ if get(g:, 'neotex_latexdiff', 0)
 	let b:neotex_jobexe .= fnameescape(expand('%:t')) . ' ' . s:neotex_buffer_tempname . ' > ' . s:neotex_preview_tempname . ' && '
 endif
 
-let b:neotex_jobexe .= 'pdflatex -jobname=' . fnameescape(expand('%:t:r')) . ' -interaction=nonstopmode '
+let b:neotex_jobexe .= 'pdflatex -shell-escape -jobname=' . fnameescape(expand('%:t:r')) . ' -interaction=nonstopmode '
 if exists('neotex_pdflatex_add_options')
 	let b:neotex_jobexe .= g:neotex_pdflatex_add_options . ' '
 endif
