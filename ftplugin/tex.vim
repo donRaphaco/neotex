@@ -21,8 +21,10 @@ if !exists('s:neotex_loaded')
 	let s:neotex_loaded = 1
 endif
 
+let b:neotex_jobexe = ''
+
 if get(g:, 'neotex_latexdiff', 0)
-	let b:neotex_jobexe .= 'latexdiff '
+	let b:neotex_jobexe = 'latexdiff '
 	if exists('neotex_latexdiff_options')
 		let b:neotex_jobexe .= g:neotex_latexdiff_options . ' '
 	endif
@@ -35,7 +37,7 @@ if exists('neotex_pdflatex_add_options')
 endif
 
 let s:neotex_pdflatex_cmd .= s:neotex_preview_tempname
-let b:neotex_jobexe = s:neotex_pdflatex_cmd
+let b:neotex_jobexe .= s:neotex_pdflatex_cmd
 
 if get(g:, 'neotex_bibtex', 0) && filereadable(expand('%:r') . '.bib')
     let b:neotex_jobexe .= ' && bibtex ' . fnameescape(expand('%:t:r')) . ' && ' . s:neotex_pdflatex_cmd . ' && ' . s:neotex_pdflatex_cmd
