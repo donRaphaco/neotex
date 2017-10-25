@@ -4,10 +4,10 @@ endif
 
 if !exists('s:neotex_loaded')
     if !has('timers')
-        echohl Error | NeoTex requires timers support | echohl None
+        echohl Error | echomsg 'NeoTex requires timers support' | echohl None
     endif
     if !has('nvim') && !has('job')
-        echohl Error | NeoTex requires neovim or vim 8 with job support | echohl None
+        echohl Error | echomsg 'NeoTex requires neovim or vim 8 with job support' | echohl None
     endif
 
 	let s:neotex_buffer_tempname = tempname()
