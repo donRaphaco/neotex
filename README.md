@@ -6,6 +6,8 @@ The PDF output gives a **live preview** of your document as you type.
 
 You have the option to **highlight changes** from the previous save using latexdiff.
 
+### Update: Now working on NeoVim and Vim 8
+
 *This plugin is experimental and not well tested*
 
 ### live preview of a latex document
@@ -21,7 +23,6 @@ For example [vim-plug](https://github.com/junegunn/vim-plug):
 ```vim
 Plug 'donRaphaco/neotex', { 'for': 'tex' }
 ```
-Do `:UpdateRemotePlugins` after installing or updating!
 
 ## Usage
 
@@ -37,6 +38,7 @@ The PDF is created in the same folder where your latex file is stored.
 | `g:neotex_latexdiff`              | 0         | enable latexdiff                          |
 | `g:neotex_latexdiff_options`      | -         | additional options for latexdiff          |
 | `g:neotex_pdflatex_add_options`   | -         | additional options for pdflatex (`-jobname=<filname>` and `-interaction=nonstopmode` is always set) |
+| `g:neotex_bibtex`                 | 0         | compile bibtex references if present (.bib file must have the same name as the .tex file) |
 
 ## Commands
 
