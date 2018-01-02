@@ -62,15 +62,24 @@ if get(g:, 'neotex_enabled', 1) == 2
 	au! _neotex_ TextChanged,TextChangedI <buffer> call s:latex_compile_delayed()
 endif
 
+function! s:job_exit(...)
+    if exists('s:job')
+        unlet s:job
+    endif
+endfunction
 
 function! s:latex_compile(_)
+    if exists('s:job')
+        call s:latex_compile_delayed()
+        return
+    endif
     call writefile(getline(1, '$'), s:neotex_buffer_tempname)
     if has('nvim')
-        call jobstart(['bash', '-c', b:neotex_jobexe], {'cwd': expand('%:p:h')})
+        let s:job = jobstart(['bash', '-c', b:neotex_jobexe], {'cwd': expand('%:p:h'), 'on_exit': function('s:job_exit')})
     else
-        call job_start(['bash', '-c', b:neotex_jobexe], {'cwd': expand('%:p:h'), 'out_io':'null'})
+        let s:job = job_start(['bash', '-c', b:neotex_jobexe], {'cwd': expand('%:p:h'), 'out_io':'null', 'exit_cb': function('s:job_exit')})
     endif
-    if exists(s:timer)
+    if exists('s:timer')
         unlet s:timer
     endif
 endfunction
