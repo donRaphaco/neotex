@@ -68,6 +68,14 @@ function! s:job_exit(...)
     endif
 endfunction
 
+function! s:job_log(job_id, data, event)
+    if get(g:, 'neotex_log', 0) == 2 && a:event == 'stdout'
+        call writefile(a:data, 'neotex.log', 'a')
+    elseif get(g:, 'neotex_log', 0) && a:event == 'stderr'
+        call writefile(a:data, 'neotex.log', 'a')
+    endif
+endfunction
+
 function! s:latex_compile(_)
     if exists('s:job')
         call s:latex_compile_delayed()
@@ -75,7 +83,7 @@ function! s:latex_compile(_)
     endif
     call writefile(getline(1, '$'), s:neotex_buffer_tempname)
     if has('nvim')
-        let s:job = jobstart(['bash', '-c', b:neotex_jobexe], {'cwd': expand('%:p:h'), 'on_exit': function('s:job_exit')})
+        let s:job = jobstart(['bash', '-c', b:neotex_jobexe], {'cwd': expand('%:p:h'), 'on_exit': function('s:job_exit'), 'on_stderr': function('s:job_log'), 'on_stdout': function('s:job_log')})
     else
         let s:job = job_start(['bash', '-c', b:neotex_jobexe], {'cwd': expand('%:p:h'), 'out_io':'null', 'exit_cb': function('s:job_exit')})
     endif
