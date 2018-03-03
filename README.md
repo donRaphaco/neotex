@@ -8,8 +8,6 @@ You have the option to **highlight changes** from the previous save using latexd
 
 ### Update: Now working on NeoVim and Vim 8
 
-*This plugin is experimental and not well tested*
-
 ### live preview of a latex document
 ![Demo1 gif](img/demo_1.gif?raw=true)
 ### live preview with latexdiff
