@@ -37,6 +37,8 @@ The PDF is created in the same folder where your latex file is stored.
 | `g:neotex_latexdiff_options`      | -         | additional options for latexdiff          |
 | `g:neotex_pdflatex_add_options`   | -         | additional options for pdflatex (`-jobname=<filname>` and `-interaction=nonstopmode` is always set) |
 
+I also recommend setting `let g:tex_flavor = 'latex'`, which can prevent some issues. (see `:h g:tex_flavor` for information)
+
 ## Commands
 
 | Command       | Description           |
