@@ -35,11 +35,10 @@ endif
 if get(g:, 'neotex_subfile', 1)
     " check modelines for pattern
     let lines = join(getline(1,&modelines) + getline(line('$') - (&modelines-1), '$'), "\n")
-    let pattern = '\mNeoTex: mainfile=\zs.\{-}\ze\n'
+    let pattern = '\mNeoTex: mainfile=\zs.\{-}\ze\(\n\|\_$\)'
     let b:neotex_compile_filename = matchstr(lines, pattern)
 endif
 if exists('b:neotex_compile_filename') && !empty(b:neotex_compile_filename)
-    echomsg 'mainfile:' . b:neotex_compile_filename
     let b:neotex_is_subfile = 1
     let b:neotex_compile_filename = simplify(expand('%:p:h') . '/' . b:neotex_compile_filename)
     let b:neotex_compile_tempname = tempname()
