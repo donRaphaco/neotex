@@ -10,12 +10,9 @@ if !exists('s:neotex_loaded')
         echohl Error | echomsg 'NeoTex requires neovim or vim 8 with job support' | echohl None
     endif
 
-    let s:buffer_tempname = tempname()
-    if get(g:, 'neotex_latexdiff', 0)
-        let s:diff_tempname = tempname()
-    else
-        let s:diff_tempname = s:buffer_tempname
-    endif
+    " if get(g:, 'neotex_latexdiff', 0)
+    "     let s:prediff_tempfile = tempname()
+    " endif
 
     if !exists('g:neotex_delay')
         let g:neotex_delay = 1000
@@ -30,58 +27,89 @@ if !exists('s:neotex_loaded')
     command! NeoTex call s:latex_compile(0)
 
     let s:neotex_loaded = 1
+
+    let s:mainfiles = {}
 endif
+
+function! s:update_maintemp(mainfile)
+    let mainfile = s:mainfiles[a:mainfile]
+    let mainbuf = getbufline(a:mainfile, 1, '$')
+    if empty(mainbuf)
+        let mainbuf = readfile(a:mainfile)
+    endif
+    let mainbuf = join(mainbuf, "\n")
+    for subfile in values(mainfile['subfiles'])
+        let mainbuf = substitute(mainbuf, subfile['substitute_from'], subfile['substitute_to'], 'g')
+    endfor
+    call writefile(split(mainbuf, "\n"), mainfile['tempfile'])
+endfunction
 
 if get(g:, 'neotex_subfile', 1)
     " check modelines for pattern
     let lines = join(getline(1,&modelines) + getline(line('$') - (&modelines-1), '$'), "\n")
-    let pattern = '\mNeoTex: mainfile=\zs.\{-}\ze\(\n\|\_$\)'
-    let b:neotex_compile_filename = matchstr(lines, pattern)
+    let pattern = '\mNeoTex: mainfile=\zs.\{-}\ze:\(\n\|\_$\)'
+    let b:neotex_mainfile = matchstr(lines, pattern)
 endif
-if exists('b:neotex_compile_filename') && !empty(b:neotex_compile_filename)
+" if valid modline found it's a subfile
+if exists('b:neotex_mainfile') && !empty(b:neotex_mainfile)
     let b:neotex_is_subfile = 1
-    let b:neotex_compile_filename = simplify(expand('%:p:h') . '/' . b:neotex_compile_filename)
-    let b:neotex_compile_tempname = tempname()
+    let b:neotex_mainfile = simplify(expand('%:p:h') . '/' . b:neotex_mainfile)
+    let b:neotex_tempfile = tempname()
+    if has_key(s:mainfiles, b:neotex_mainfile)
+        let b:neotex_maintemp = s:mainfiles[b:neotex_mainfile]['tempfile']
+    else
+        let b:neotex_maintemp = tempname()
+        let s:mainfiles[b:neotex_mainfile] =  { 'tempfile': b:neotex_tempfile, 'subfiles': {} }
+    endif
+    " get subfile path relative to mainfile-directory
+    " only works if subfile is in same or subdirectory as mainfile
+    let subfile = substitute(expand('%:p'), fnamemodify(b:neotex_mainfile, ':h') . '/', '', '')
+    let s:mainfiles[b:neotex_mainfile]['subfiles'][@%] = {
+                \ 'tempfile': b:neotex_tempfile,
+                \ 'substitute_from': '\(\\include\|\\input\){' .  subfile . '}',
+                \ 'substitute_to': '\1{' . b:neotex_tempfile . '}'
+                \ }
+    call writefile(getline(1, '$'), b:neotex_tempfile)
+    call s:update_maintemp(b:neotex_mainfile)
 else
-    let b:neotex_compile_filename = expand('%:p')
-    let b:neotex_compile_tempname = s:diff_tempname
+    let b:neotex_is_subfile = 0
+    let b:neotex_mainfile = expand('%:p')
+    if has_key(s:mainfiles, b:neotex_mainfile)
+        let b:neotex_tempfile = s:mainfiles[b:neotex_mainfile]['tempfile']
+    else
+        let b:neotex_tempfile = tempname()
+        let s:mainfiles[b:neotex_mainfile] =  { 'tempfile': b:neotex_tempfile, 'subfiles': {} }
+    endif
+    let b:neotex_maintemp = b:neotex_tempfile
 endif
-let b:neotex_compile_cwd = fnamemodify(b:neotex_compile_filename, ':h')
+
+let b:neotex_compile_cwd = fnamemodify(b:neotex_mainfile, ':h')
 
 let b:neotex_jobexe=''
 
-if get(b:, 'neotex_is_subfile', 0)
-    " get subfile path relative to mainfile-directory and escape directory slashes for sed
-    " only works if subfile is in same or subdirectory as mainfile
-    let sed_subfile = substitute(
-                \ substitute(expand('%:p'), b:neotex_compile_cwd . '/', '', ''),
-                \ '/', '\\/', 'g')
-    let sed_tempfile = substitute(s:diff_tempname, '/', '\\/', 'g')
-    let b:neotex_jobexe .= 'sed "s/\(\\include\|\\input\){' . sed_subfile . '}'
-                \ . '/\1{' . sed_tempfile . '}/g" ' . b:neotex_compile_filename . ' > ' . b:neotex_compile_tempname . ' && '
-endif
-
-if get(g:, 'neotex_latexdiff', 0)
-    let b:neotex_jobexe .= 'latexdiff '
-    if exists('neotex_latexdiff_options')
-        let b:neotex_jobexe .= g:neotex_latexdiff_options . ' '
-    endif
-    let b:neotex_jobexe .= fnameescape(expand('%:t')) . ' ' . s:buffer_tempname . ' > ' . s:diff_tempname . ' && '
-endif
+" if get(g:, 'neotex_latexdiff', 0)
+"     let b:neotex_prediff = s:prediff_tempfile
+"     let b:neotex_jobexe .= 'latexdiff '
+"     if exists('neotex_latexdiff_options')
+"         let b:neotex_jobexe .= g:neotex_latexdiff_options . ' '
+"     endif
+"     let b:neotex_jobexe .= fnameescape(expand('%:t')) . ' ' . s:prediff_tempfile . ' > ' . b:neotex_tempfile . ' && '
+" else
+    let b:neotex_prediff = b:neotex_tempfile
+" endif
 
 let b:neotex_jobexe .= get(g:, 'neotex_pdflatex_alternative', 'pdflatex') . ' -shell-escape -jobname='
-            \ . fnameescape(fnamemodify(b:neotex_compile_filename, ':t:r')) . ' -interaction=nonstopmode '
+            \ . fnameescape(fnamemodify(b:neotex_mainfile, ':t:r')) . ' -interaction=nonstopmode '
 if exists('neotex_pdflatex_add_options')
     let b:neotex_jobexe .= g:neotex_pdflatex_add_options . ' '
 endif
 
-let b:neotex_jobexe .= b:neotex_compile_tempname
+let b:neotex_jobexe .= b:neotex_maintemp
 
 
 if get(g:, 'neotex_enabled', 1) == 2
     au! _neotex_ TextChanged,TextChangedI <buffer> call s:latex_compile_delayed()
 endif
-
 
 function! s:job_exit(...)
     if exists('s:job')
@@ -101,7 +129,11 @@ function! s:latex_compile(_)
         call s:latex_compile_delayed()
         return
     endif
-    call writefile(getline(1, '$'), s:buffer_tempname)
+    if has_key(s:mainfiles, expand('%:p'))
+        call s:update_maintemp(expand('%:p'))
+    else
+        call writefile(getline(1, '$'), b:neotex_prediff)
+    endif
     if has('nvim')
         let s:job = jobstart(['bash', '-c', b:neotex_jobexe],
                     \ {'cwd': b:neotex_compile_cwd,
@@ -109,7 +141,9 @@ function! s:latex_compile(_)
                     \ 'on_stderr': function('s:job_log'),
                     \ 'on_stdout': function('s:job_log')})
     else
-        let options = { 'cwd': b:neotex_compile_cwd, 'err_io': 'null', 'exit_cb': function('s:job_exit') }
+        let options = {'cwd': b:neotex_compile_cwd,
+                    \ 'err_io': 'null',
+                    \ 'exit_cb': function('s:job_exit')}
         if get(g:, 'neotex_log', 0)
             let options.err_io = 'file'
             let options.err_name = 'neotex.log'
