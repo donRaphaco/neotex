@@ -81,3 +81,7 @@ function! s:latex_compile_delayed()
     endif
     let s:timer = timer_start(g:neotex_delay, function('s:latex_compile'))
 endfunction
+
+function!  NeotexTempname()
+    return s:neotex_preview_tempname
+endfunction
