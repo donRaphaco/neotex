@@ -10,9 +10,12 @@ if !exists('s:neotex_loaded')
         echohl Error | echomsg 'NeoTex requires neovim or vim 8 with job support' | echohl None
     endif
 
-    " if get(g:, 'neotex_latexdiff', 0)
-    "     let s:prediff_tempfile = tempname()
-    " endif
+    if !get(g:, 'neotex_subfile', 0)
+        let s:neotex_tempfile = tempname()
+    endif
+    if get(g:, 'neotex_latexdiff', 0)
+        let s:prediff_tempfile = tempname()
+    endif
 
     if !exists('g:neotex_delay')
         let g:neotex_delay = 1000
@@ -44,42 +47,47 @@ function! s:update_maintemp(mainfile)
     call writefile(split(mainbuf, "\n"), mainfile['tempfile'])
 endfunction
 
-if get(g:, 'neotex_subfile', 1)
+if get(g:, 'neotex_subfile', 0)
     " check modelines for pattern
     let lines = join(getline(1,&modelines) + getline(line('$') - (&modelines-1), '$'), "\n")
     let pattern = '\mNeoTex: mainfile=\zs.\{-}\ze:\(\n\|\_$\)'
     let b:neotex_mainfile = matchstr(lines, pattern)
-endif
-" if valid modline found it's a subfile
-if exists('b:neotex_mainfile') && !empty(b:neotex_mainfile)
-    let b:neotex_is_subfile = 1
-    let b:neotex_mainfile = simplify(expand('%:p:h') . '/' . b:neotex_mainfile)
-    let b:neotex_tempfile = tempname()
-    if has_key(s:mainfiles, b:neotex_mainfile)
-        let b:neotex_maintemp = s:mainfiles[b:neotex_mainfile]['tempfile']
+    " if valid modline found it's a subfile
+    if exists('b:neotex_mainfile') && !empty(b:neotex_mainfile)
+        let b:neotex_is_subfile = 1
+        let b:neotex_mainfile = simplify(expand('%:p:h') . '/' . b:neotex_mainfile)
+        let b:neotex_tempfile = tempname()
+        if has_key(s:mainfiles, b:neotex_mainfile)
+            let b:neotex_maintemp = s:mainfiles[b:neotex_mainfile]['tempfile']
+        else
+            let b:neotex_maintemp = tempname()
+            let s:mainfiles[b:neotex_mainfile] =  { 'tempfile': b:neotex_tempfile, 'subfiles': {} }
+        endif
+        " get subfile path relative to mainfile-directory
+        " only works if subfile is in same or subdirectory as mainfile
+        let subfile = substitute(expand('%:p'), fnamemodify(b:neotex_mainfile, ':h') . '/', '', '')
+        let s:mainfiles[b:neotex_mainfile]['subfiles'][@%] = {
+                    \ 'tempfile': b:neotex_tempfile,
+                    \ 'substitute_from': '\(\\include\|\\input\){' .  subfile . '}',
+                    \ 'substitute_to': '\1{' . b:neotex_tempfile . '}'
+                    \ }
+        call writefile(getline(1, '$'), b:neotex_tempfile)
+        call s:update_maintemp(b:neotex_mainfile)
     else
-        let b:neotex_maintemp = tempname()
-        let s:mainfiles[b:neotex_mainfile] =  { 'tempfile': b:neotex_tempfile, 'subfiles': {} }
+        let b:neotex_is_subfile = 0
+        let b:neotex_mainfile = expand('%:p')
+        if has_key(s:mainfiles, b:neotex_mainfile)
+            let b:neotex_tempfile = s:mainfiles[b:neotex_mainfile]['tempfile']
+        else
+            let b:neotex_tempfile = tempname()
+            let s:mainfiles[b:neotex_mainfile] =  { 'tempfile': b:neotex_tempfile, 'subfiles': {} }
+        endif
+        let b:neotex_maintemp = b:neotex_tempfile
     endif
-    " get subfile path relative to mainfile-directory
-    " only works if subfile is in same or subdirectory as mainfile
-    let subfile = substitute(expand('%:p'), fnamemodify(b:neotex_mainfile, ':h') . '/', '', '')
-    let s:mainfiles[b:neotex_mainfile]['subfiles'][@%] = {
-                \ 'tempfile': b:neotex_tempfile,
-                \ 'substitute_from': '\(\\include\|\\input\){' .  subfile . '}',
-                \ 'substitute_to': '\1{' . b:neotex_tempfile . '}'
-                \ }
-    call writefile(getline(1, '$'), b:neotex_tempfile)
-    call s:update_maintemp(b:neotex_mainfile)
 else
     let b:neotex_is_subfile = 0
     let b:neotex_mainfile = expand('%:p')
-    if has_key(s:mainfiles, b:neotex_mainfile)
-        let b:neotex_tempfile = s:mainfiles[b:neotex_mainfile]['tempfile']
-    else
-        let b:neotex_tempfile = tempname()
-        let s:mainfiles[b:neotex_mainfile] =  { 'tempfile': b:neotex_tempfile, 'subfiles': {} }
-    endif
+    let b:neotex_tempfile = s:neotex_tempfile
     let b:neotex_maintemp = b:neotex_tempfile
 endif
 
@@ -87,16 +95,16 @@ let b:neotex_compile_cwd = fnamemodify(b:neotex_mainfile, ':h')
 
 let b:neotex_jobexe=''
 
-" if get(g:, 'neotex_latexdiff', 0)
-"     let b:neotex_prediff = s:prediff_tempfile
-"     let b:neotex_jobexe .= 'latexdiff '
-"     if exists('neotex_latexdiff_options')
-"         let b:neotex_jobexe .= g:neotex_latexdiff_options . ' '
-"     endif
-"     let b:neotex_jobexe .= fnameescape(expand('%:t')) . ' ' . s:prediff_tempfile . ' > ' . b:neotex_tempfile . ' && '
-" else
+if get(g:, 'neotex_latexdiff', 0) && !get(g:, 'neotex_subfile', 0)
+    let b:neotex_prediff = s:prediff_tempfile
+    let b:neotex_jobexe .= 'latexdiff '
+    if exists('neotex_latexdiff_options')
+        let b:neotex_jobexe .= g:neotex_latexdiff_options . ' '
+    endif
+    let b:neotex_jobexe .= fnameescape(expand('%:t')) . ' ' . s:prediff_tempfile . ' > ' . b:neotex_tempfile . ' && '
+else
     let b:neotex_prediff = b:neotex_tempfile
-" endif
+endif
 
 let b:neotex_jobexe .= get(g:, 'neotex_pdflatex_alternative', 'pdflatex') . ' -shell-escape -jobname='
             \ . fnameescape(fnamemodify(b:neotex_mainfile, ':t:r')) . ' -interaction=nonstopmode '
